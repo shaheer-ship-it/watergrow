@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { PlantRecord, UserRole, AppView } from './types';
 import PlantStage from './components/PlantStage';
-import { Droplets, Heart, ArrowRight, Loader2, Bell, LogOut, CheckCircle2, Copy, CreditCard, X, Coffee, ShieldCheck } from 'lucide-react';
+import { Droplets, Heart, ArrowRight, Loader2, Bell, LogOut, CheckCircle2, Copy, CreditCard, X, Coffee, ShieldCheck, Share, Smartphone } from 'lucide-react';
 
 // Stripe Configuration
 const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_live_51SaQdmPgKI4BZbGFXMH7j95m73CU4FRDZgabXeS8qRQtjPF70losWvyQI5ekdc6tqo40MYO17zhZ3PlTGx3OP4Bn00u70dV1t7';
@@ -26,6 +26,12 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   
+  // iOS PWA Prompt State
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+
+  // Toast Notification State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  
   // Payment State
   const [showPayment, setShowPayment] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -40,7 +46,7 @@ const App: React.FC = () => {
   );
   const prevPartnerWater = useRef<number | null>(null);
 
-  // Check Local Storage and URL Params on Mount
+  // Check Local Storage, URL Params, and iOS PWA status on Mount
   useEffect(() => {
     const hasOnboarded = localStorage.getItem('water_grow_onboarding_completed');
     if (hasOnboarded) {
@@ -52,6 +58,16 @@ const App: React.FC = () => {
     if (query.get('success')) {
       setShowSuccess(true);
       window.history.replaceState({}, document.title, "/");
+    }
+
+    // Detect iOS and Standalone status
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    // Check if running in standalone mode (PWA)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+
+    if (isIOS && !isStandalone) {
+      // Delay prompt slightly for better UX
+      setTimeout(() => setShowInstallPrompt(true), 2000);
     }
 
     setIsInitialized(true);
@@ -115,14 +131,35 @@ const App: React.FC = () => {
     setView('JOIN');
   };
 
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) return;
-    const permission = await Notification.requestPermission();
-    setNotificationPermission(permission);
-    if (permission === 'granted') {
-      new Notification("Notifications Active", {
-        body: "You will be notified when your partner logs hydration."
-      });
+    if (!('Notification' in window)) {
+      showToast("System notifications not supported on this browser. In-app alerts enabled.", 'info');
+      return;
+    }
+    
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      if (permission === 'granted') {
+        showToast("Notifications enabled!", 'success');
+        try {
+          new Notification("Notifications Active", {
+            body: "You will be notified when your partner logs hydration."
+          });
+        } catch (e) {
+          console.log("System notification test failed (common on mobile browsers):", e);
+        }
+      } else if (permission === 'denied') {
+        showToast("Notifications blocked. Check settings.", 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Could not enable notifications.", 'error');
     }
   };
 
@@ -158,8 +195,6 @@ const App: React.FC = () => {
         throw new Error("No Session ID returned from server.");
       }
 
-      // Initialize Stripe Client
-      // We use window.Stripe because we loaded it via CDN in layout.tsx/index.html
       if (!window.Stripe) {
         throw new Error("Stripe.js failed to load.");
       }
@@ -209,11 +244,19 @@ const App: React.FC = () => {
     const partnerWater = role === 'p1' ? plantData.p2_water : plantData.p1_water;
 
     if (prevPartnerWater.current !== null && partnerWater > prevPartnerWater.current) {
+      // Always show in-app toast
+      showToast("Partner just hydrated! 🌱", 'success');
+
+      // Try system notification
       if (notificationPermission === 'granted') {
-        new Notification("Partner Activity", {
-          body: "Your partner just hydrated.",
-          silent: false,
-        });
+        try {
+          new Notification("Partner Activity", {
+            body: "Your partner just hydrated.",
+            silent: false,
+          });
+        } catch (e) {
+          // Ignore errors common on mobile
+        }
       }
     }
     prevPartnerWater.current = partnerWater;
@@ -239,6 +282,7 @@ const App: React.FC = () => {
 
     if (updateError) {
       setPlantData(prevData);
+      showToast("Sync failed. Checking connection...", 'error');
     }
   };
 
@@ -274,7 +318,49 @@ const App: React.FC = () => {
     const currentStep = steps[onboardingStep];
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
+         {toast && (
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[70] animate-in slide-in-from-top-4 fade-in w-max max-w-[90vw]">
+            <div className={`px-6 py-3 rounded-full shadow-xl flex items-center gap-3 border backdrop-blur-md ${
+              toast.type === 'success' ? 'bg-emerald-50/90 border-emerald-100 text-emerald-800' : 
+              toast.type === 'error' ? 'bg-red-50/90 border-red-100 text-red-800' :
+              'bg-slate-900/90 text-white border-slate-800'
+            }`}>
+              {toast.type === 'success' && <CheckCircle2 size={16} />}
+              {toast.type === 'error' && <X size={16} />}
+              {toast.type === 'info' && <Bell size={16} />}
+              <span className="text-sm font-semibold">{toast.message}</span>
+            </div>
+          </div>
+         )}
+
+         {/* iOS Install Prompt Overlay */}
+         {showInstallPrompt && (
+           <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 animate-in slide-in-from-bottom duration-500">
+              <div className="bg-white/95 backdrop-blur-md border border-slate-200 shadow-2xl rounded-2xl p-5 relative max-w-md mx-auto ring-1 ring-black/5">
+                <button 
+                   onClick={() => setShowInstallPrompt(false)}
+                   className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 p-2"
+                >
+                   <X size={16} />
+                </button>
+                <div className="flex gap-4">
+                   <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-blue-100">
+                      <Smartphone size={24} className="text-blue-600" />
+                   </div>
+                   <div className="pr-6">
+                      <h3 className="font-bold text-slate-900 text-sm mb-1">Install App for Best Experience</h3>
+                      <p className="text-slate-500 text-xs leading-relaxed">
+                         To enable full notifications and remove browser bars, tap <span className="inline-flex items-center justify-center w-6 h-6 mx-0.5 bg-slate-100 rounded text-slate-600"><Share size={12}/></span> below and select <span className="font-bold text-slate-700">"Add to Home Screen"</span>.
+                      </p>
+                   </div>
+                </div>
+                {/* Arrow pointing down */}
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-white/95 drop-shadow-sm"></div>
+              </div>
+           </div>
+         )}
+
          <div className="tech-panel w-full max-w-md p-10 rounded-2xl relative z-10">
             
             {/* Progress Indicators */}
@@ -429,6 +515,22 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col relative">
         
+        {/* Toast Overlay */}
+        {toast && (
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[70] animate-in slide-in-from-top-4 fade-in w-max max-w-[90vw]">
+             <div className={`px-6 py-3 rounded-full shadow-xl flex items-center gap-3 border backdrop-blur-md ${
+                toast.type === 'success' ? 'bg-emerald-50/90 border-emerald-100 text-emerald-800' : 
+                toast.type === 'error' ? 'bg-red-50/90 border-red-100 text-red-800' :
+                'bg-slate-900/90 text-white border-slate-800'
+             }`}>
+                {toast.type === 'success' && <CheckCircle2 size={16} />}
+                {toast.type === 'error' && <X size={16} />}
+                {toast.type === 'info' && <Bell size={16} />}
+                <span className="text-sm font-semibold">{toast.message}</span>
+             </div>
+          </div>
+        )}
+
         {/* Success Overlay */}
         {showSuccess && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
@@ -494,6 +596,33 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* iOS Install Prompt Overlay (Game View) */}
+        {showInstallPrompt && (
+           <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 animate-in slide-in-from-bottom duration-500">
+              <div className="bg-white/95 backdrop-blur-md border border-slate-200 shadow-2xl rounded-2xl p-5 relative max-w-md mx-auto ring-1 ring-black/5">
+                <button 
+                   onClick={() => setShowInstallPrompt(false)}
+                   className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 p-2"
+                >
+                   <X size={16} />
+                </button>
+                <div className="flex gap-4">
+                   <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-blue-100">
+                      <Smartphone size={24} className="text-blue-600" />
+                   </div>
+                   <div className="pr-6">
+                      <h3 className="font-bold text-slate-900 text-sm mb-1">Install App for Best Experience</h3>
+                      <p className="text-slate-500 text-xs leading-relaxed">
+                         To enable full notifications and remove browser bars, tap <span className="inline-flex items-center justify-center w-6 h-6 mx-0.5 bg-slate-100 rounded text-slate-600"><Share size={12}/></span> below and select <span className="font-bold text-slate-700">"Add to Home Screen"</span>.
+                      </p>
+                   </div>
+                </div>
+                {/* Arrow pointing down */}
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-white/95 drop-shadow-sm"></div>
+              </div>
+           </div>
+         )}
 
         {/* Header Bar */}
         <div className="w-full px-6 py-6 flex justify-between items-center z-20">
