@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { PlantRecord, UserRole, AppView } from './types';
 import PlantStage from './components/PlantStage';
-import { Droplets, Heart, ArrowRight, Loader2, Bell, LogOut, CheckCircle2, Copy, CreditCard, X, Coffee, ShieldCheck, Share, Smartphone } from 'lucide-react';
+import { Droplets, Heart, ArrowRight, Loader2, Bell, LogOut, CheckCircle2, Copy, CreditCard, X, Coffee, ShieldCheck, Share, Smartphone, Wifi, User2 } from 'lucide-react';
 
 // Stripe Configuration
 const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_live_51SaQdmPgKI4BZbGFXMH7j95m73CU4FRDZgabXeS8qRQtjPF70losWvyQI5ekdc6tqo40MYO17zhZ3PlTGx3OP4Bn00u70dV1t7';
@@ -39,6 +39,7 @@ const App: React.FC = () => {
 
   // Onboarding State
   const [onboardingStep, setOnboardingStep] = useState(0);
+  const [demoWatered, setDemoWatered] = useState(false); // For interactive tutorial
 
   // Notification state
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
@@ -139,6 +140,8 @@ const App: React.FC = () => {
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
       showToast("System notifications not supported on this browser. In-app alerts enabled.", 'info');
+      // Even if not supported, we treat as "done" for onboarding purposes
+      completeOnboarding();
       return;
     }
     
@@ -157,9 +160,11 @@ const App: React.FC = () => {
       } else if (permission === 'denied') {
         showToast("Notifications blocked. Check settings.", 'error');
       }
+      // Proceed after choice
+      setTimeout(completeOnboarding, 500);
     } catch (err) {
       console.error(err);
-      showToast("Could not enable notifications.", 'error');
+      completeOnboarding();
     }
   };
 
@@ -296,123 +301,146 @@ const App: React.FC = () => {
 
   // --- VIEW: ONBOARDING ---
   if (view === 'ONBOARDING') {
-    const steps = [
-      {
-        title: "Synchronization",
-        desc: "Establish a real-time connection link with your partner.",
-        buttonText: "Initialize"
-      },
-      {
-        title: "Real-time Growth",
-        desc: "Hydration inputs on your device stimulate growth on the connected interface.",
-        buttonText: "Continue"
-      },
-      {
-        title: "Active Alerts",
-        desc: "Enable system notifications to stay synchronized with partner activity.",
-        action: true,
-        buttonText: "Launch"
-      }
-    ];
+    const totalSteps = 4;
 
-    const currentStep = steps[onboardingStep];
+    const renderStepContent = () => {
+      switch (onboardingStep) {
+        case 0: // WELCOME
+          return (
+            <div className="flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="w-24 h-24 bg-gradient-to-tr from-emerald-100 to-teal-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-emerald-100">
+                <Heart size={40} className="text-emerald-500 fill-emerald-100" />
+              </div>
+              <h1 className="text-3xl font-bold text-slate-900 mb-4 tracking-tight">Water & Grow</h1>
+              <p className="text-slate-500 text-lg leading-relaxed max-w-xs mx-auto">
+                A shared hydration tracker. When you drink water, your partner's plant grows.
+              </p>
+            </div>
+          );
+          
+        case 1: // INTERACTIVE TUTORIAL
+          return (
+            <div className="flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
+              <div className="mb-2">
+                <PlantStage 
+                  waterCount={demoWatered ? 5 : 0} 
+                  label="Your Plant" 
+                  isOwner={true} 
+                />
+              </div>
+              <p className="text-slate-500 text-sm mb-6 max-w-xs mx-auto min-h-[40px]">
+                {demoWatered 
+                  ? "Great! Your plant just grew because you hydrated." 
+                  : "Try it out. Tap the button below to log water."}
+              </p>
+              
+              {!demoWatered && (
+                 <button
+                 onClick={() => setDemoWatered(true)}
+                 className="bg-emerald-500 hover:bg-emerald-600 text-white pl-6 pr-8 py-3 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-3 animate-pulse"
+               >
+                 <Droplets size={18} className="fill-white" />
+                 <span className="font-bold">Drink Water</span>
+               </button>
+              )}
+            </div>
+          );
+
+        case 2: // REALTIME EXPLANATION
+           return (
+             <div className="flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+               <div className="flex items-center justify-center gap-4 mb-8 relative h-24 w-full">
+                  {/* Partner A */}
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-12 h-16 border-2 border-slate-300 rounded-lg flex items-center justify-center bg-white shadow-sm">
+                      <User2 size={20} className="text-slate-400" />
+                    </div>
+                  </div>
+                  
+                  {/* Signal Animation */}
+                  <div className="flex flex-col items-center justify-center text-emerald-500 gap-1">
+                    <Wifi size={24} className="animate-ping absolute opacity-75" />
+                    <Wifi size={24} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mt-1">Instant</span>
+                  </div>
+
+                  {/* Partner B */}
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-12 h-16 border-2 border-slate-800 bg-slate-800 rounded-lg flex items-center justify-center shadow-md">
+                      <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
+                        <CheckCircle2 size={16} className="text-white" />
+                      </div>
+                    </div>
+                  </div>
+               </div>
+               
+               <h2 className="text-2xl font-bold text-slate-900 mb-3">Syncs Instantly</h2>
+               <p className="text-slate-500 text-base leading-relaxed max-w-xs mx-auto">
+                 No refreshing needed. When you add water, their screen updates in real-time.
+               </p>
+             </div>
+           );
+
+        case 3: // NOTIFICATIONS
+          return (
+            <div className="flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+               <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-blue-100 relative">
+                <Bell size={40} className="text-blue-500" />
+                <div className="absolute top-0 right-0 w-8 h-8 bg-rose-500 rounded-full border-4 border-white"></div>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-3">Stay Connected</h2>
+              <p className="text-slate-500 text-base leading-relaxed max-w-xs mx-auto mb-6">
+                Enable notifications so you know exactly when your partner is thinking of you (and drinking water).
+              </p>
+            </div>
+          );
+      }
+    }
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
-         {toast && (
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[70] animate-in slide-in-from-top-4 fade-in w-max max-w-[90vw]">
-            <div className={`px-6 py-3 rounded-full shadow-xl flex items-center gap-3 border backdrop-blur-md ${
-              toast.type === 'success' ? 'bg-emerald-50/90 border-emerald-100 text-emerald-800' : 
-              toast.type === 'error' ? 'bg-red-50/90 border-red-100 text-red-800' :
-              'bg-slate-900/90 text-white border-slate-800'
-            }`}>
-              {toast.type === 'success' && <CheckCircle2 size={16} />}
-              {toast.type === 'error' && <X size={16} />}
-              {toast.type === 'info' && <Bell size={16} />}
-              <span className="text-sm font-semibold">{toast.message}</span>
-            </div>
-          </div>
-         )}
+      <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-slate-50">
+         {/* Background Decoration */}
+         <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-emerald-50/50 to-transparent pointer-events-none" />
 
-         {/* iOS Install Prompt Overlay */}
-         {showInstallPrompt && (
-           <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 animate-in slide-in-from-bottom duration-500">
-              <div className="bg-white/95 backdrop-blur-md border border-slate-200 shadow-2xl rounded-2xl p-5 relative max-w-md mx-auto ring-1 ring-black/5">
-                <button 
-                   onClick={() => setShowInstallPrompt(false)}
-                   className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 p-2"
-                >
-                   <X size={16} />
-                </button>
-                <div className="flex gap-4">
-                   <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-blue-100">
-                      <Smartphone size={24} className="text-blue-600" />
-                   </div>
-                   <div className="pr-6">
-                      <h3 className="font-bold text-slate-900 text-sm mb-1">Install App for Best Experience</h3>
-                      <p className="text-slate-500 text-xs leading-relaxed">
-                         To enable full notifications and remove browser bars, tap <span className="inline-flex items-center justify-center w-6 h-6 mx-0.5 bg-slate-100 rounded text-slate-600"><Share size={12}/></span> below and select <span className="font-bold text-slate-700">"Add to Home Screen"</span>.
-                      </p>
-                   </div>
-                </div>
-                {/* Arrow pointing down */}
-                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-white/95 drop-shadow-sm"></div>
-              </div>
-           </div>
-         )}
-
-         <div className="tech-panel w-full max-w-md p-10 rounded-2xl relative z-10">
+         <div className="tech-panel w-full max-w-md p-8 rounded-3xl relative z-10 flex flex-col min-h-[480px]">
             
-            {/* Progress Indicators */}
-            <div className="flex gap-2 mb-10">
-               {steps.map((_, idx) => (
+            {/* Top Progress Bar */}
+            <div className="flex gap-2 mb-12">
+               {Array.from({ length: totalSteps }).map((_, idx) => (
                  <div 
                    key={idx} 
-                   className={`h-1 rounded-full flex-1 transition-all duration-300 ${idx <= onboardingStep ? 'bg-slate-900' : 'bg-slate-200'}`}
+                   className={`h-1.5 rounded-full flex-1 transition-all duration-500 ${idx <= onboardingStep ? 'bg-slate-900' : 'bg-slate-100'}`}
                  />
                ))}
             </div>
 
-            <div className="flex flex-col items-start text-left">
-               <h2 className="text-3xl font-bold text-slate-900 mb-4 tracking-tight">
-                 {currentStep.title}
-               </h2>
-               
-               <p className="text-slate-500 text-base leading-relaxed mb-8 font-medium">
-                 {currentStep.desc}
-               </p>
-
-               {currentStep.action && (
-                 <div className="w-full mb-8">
-                    {notificationPermission === 'default' ? (
-                      <button 
-                        onClick={requestNotificationPermission}
-                        className="w-full py-3 px-4 rounded-lg border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold transition-all flex items-center justify-center gap-2 hover:bg-slate-50"
-                      >
-                        <Bell size={16} />
-                        Enable Notifications
-                      </button>
-                    ) : (
-                      <div className="w-full py-3 px-4 rounded-lg bg-emerald-50 text-emerald-700 font-medium flex items-center gap-2 border border-emerald-100 text-sm">
-                        <CheckCircle2 size={16} />
-                        Permissions granted
-                      </div>
-                    )}
-                 </div>
-               )}
+            {/* Dynamic Content Area */}
+            <div className="flex-1 flex flex-col items-center justify-center">
+               {renderStepContent()}
             </div>
 
-            <div className="mt-2 flex justify-end">
-               <button
-                 onClick={() => {
-                   if (onboardingStep < steps.length - 1) setOnboardingStep(prev => prev + 1);
-                   else completeOnboarding();
-                 }}
-                 className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-               >
-                 {currentStep.buttonText}
-                 <ArrowRight size={16} />
-               </button>
+            {/* Bottom Navigation */}
+            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end w-full">
+               {/* Step 1 requires the user to click "Drink" inside the content, not here, unless they've done it */}
+               {onboardingStep === 1 && !demoWatered ? (
+                 <div className="h-12" /> /* Placeholder to keep layout stable */
+               ) : onboardingStep === 3 ? (
+                 <button
+                   onClick={requestNotificationPermission}
+                   className="w-full bg-slate-900 hover:bg-slate-800 text-white text-base font-semibold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+                 >
+                   Enable Notifications
+                   <Bell size={18} />
+                 </button>
+               ) : (
+                 <button
+                   onClick={() => setOnboardingStep(prev => prev + 1)}
+                   className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                 >
+                   {onboardingStep === 0 ? "Get Started" : "Continue"}
+                   <ArrowRight size={16} />
+                 </button>
+               )}
             </div>
          </div>
       </div>
