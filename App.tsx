@@ -2,7 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { PlantRecord, UserRole, AppView } from './types';
 import PlantStage from './components/PlantStage';
+import { createCheckoutSession } from './app/actions';
 import { Droplets, Heart, Users, ArrowRight, Loader2, Bell, BellRing, LogOut, CheckCircle2, ChevronRight, Sparkles, ChevronLeft, Sprout, Zap, Smile, Copy, CreditCard, X, Coffee } from 'lucide-react';
+
+// Stripe Configuration
+const STRIPE_PUBLISHABLE_KEY = 'pk_live_51SaQdmPgKI4BZbGFXMH7j95m73CU4FRDZgabXeS8qRQtjPF70losWvyQI5ekdc6tqo40MYO17zhZ3PlTGx3OP4Bn00u70dV1t7';
+declare const Stripe: any;
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('ONBOARDING');
@@ -122,11 +127,26 @@ const App: React.FC = () => {
 
   const handlePayment = async () => {
     setPaymentLoading(true);
-    // Simulate API call for payment since backend is not available in this environment
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setPaymentLoading(false);
-    setShowPayment(false);
-    setShowSuccess(true);
+    try {
+      // 1. Call Server Action to create session securely
+      const { sessionId } = await createCheckoutSession();
+      
+      // 2. Load Stripe Client
+      const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+      
+      // 3. Redirect
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+      
+      if (error) {
+        console.error('Stripe Redirect Error:', error);
+        alert('Could not redirect to checkout.');
+        setPaymentLoading(false);
+      }
+    } catch (err) {
+      console.error("Payment Error:", err);
+      alert("Something went wrong initializing the donation. (Ensure server-side keys are set)");
+      setPaymentLoading(false);
+    }
   };
 
   // Real-time subscription
@@ -431,4 +451,139 @@ const App: React.FC = () => {
               </button>
               
               <div className="flex flex-col items-center text-center pt-4">
-                <div className="w-20 h-20 bg-gradient
+                <div className="w-20 h-20 bg-gradient-to-tr from-yellow-300 to-amber-400 rounded-full flex items-center justify-center shadow-lg mb-6 animate-float">
+                  <Coffee size={36} className="text-white" />
+                </div>
+                
+                <h3 className="text-2xl font-black text-slate-900 mb-2">Hydration Fund</h3>
+                <p className="text-slate-500 font-medium mb-8 leading-snug">
+                  Keep the servers watered and the plants growing! Your support helps us stay hydrated.
+                </p>
+
+                <div className="w-full bg-slate-50 rounded-2xl p-4 mb-6 border border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white p-2 rounded-xl shadow-sm">
+                       <CreditCard size={20} className="text-slate-700" />
+                    </div>
+                    <div className="text-left">
+                       <div className="text-sm font-bold text-slate-800">Donation</div>
+                       <div className="text-xs text-slate-400 font-medium">One-time</div>
+                    </div>
+                  </div>
+                  <div className="text-xl font-black text-slate-900">$5.00</div>
+                </div>
+
+                <button 
+                  onClick={handlePayment}
+                  disabled={paymentLoading}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {paymentLoading ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <>
+                      <span>Donate with Card</span>
+                      <ArrowRight size={20} />
+                    </>
+                  )}
+                </button>
+                <p className="mt-4 text-[10px] text-slate-400 uppercase tracking-widest font-bold">Secured by Stripe</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Top Floating Bar */}
+        <div className="relative z-20 px-4 py-4">
+          <div className="glass-panel rounded-full p-2 flex justify-between items-center max-w-lg mx-auto shadow-lg">
+            
+            <div 
+              onClick={copyRoomCode}
+              className="flex items-center gap-3 px-2 cursor-pointer hover:bg-white/40 rounded-full py-1 transition-colors group"
+            >
+               <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-md">
+                 <Sparkles size={18} className="fill-yellow-400 text-yellow-400" />
+               </div>
+               <div className="leading-tight">
+                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Room</div>
+                 <div className="font-bold text-slate-900 flex items-center gap-1">
+                   {roomId}
+                   {copied ? <CheckCircle2 size={12} className="text-green-500"/> : <Copy size={12} className="text-slate-300 group-hover:text-slate-500"/>}
+                 </div>
+               </div>
+            </div>
+
+            <div className="flex items-center gap-2 pr-1">
+               <button 
+                onClick={() => setShowPayment(true)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-500 hover:bg-indigo-200 transition-colors"
+                title="Support"
+              >
+                <Heart size={18} className="fill-current" />
+              </button>
+               <button 
+                onClick={handleLeaveRoom}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Garden Area */}
+        <div className="flex-1 flex flex-col justify-center items-center relative pb-32">
+           {/* Decorative Elements */}
+           <div className="absolute top-1/4 left-10 text-6xl opacity-10 rotate-12 pointer-events-none">☁️</div>
+           <div className="absolute top-1/3 right-10 text-6xl opacity-10 -rotate-12 pointer-events-none">✨</div>
+
+           <div className="grid grid-cols-2 gap-4 w-full max-w-4xl px-2 md:px-12 items-end">
+            <div className="order-1 flex justify-center transform scale-95 md:scale-100">
+              <PlantStage 
+                waterCount={myCount} 
+                label="You" 
+                isOwner={true} 
+              />
+            </div>
+            <div className="order-2 flex justify-center transform scale-95 md:scale-100">
+              <PlantStage 
+                waterCount={partnerCount} 
+                label="Bestie" 
+                isOwner={false} 
+              />
+            </div>
+           </div>
+        </div>
+
+        {/* Bottom Button Area */}
+        <div className="fixed bottom-8 left-0 right-0 z-30 px-6 pointer-events-none">
+          <div className="max-w-xs mx-auto pointer-events-auto">
+             <button
+                onClick={handleDrink}
+                className="group relative w-full touch-manipulation"
+              >
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-fuchsia-500 rounded-[2rem] blur opacity-40 group-hover:opacity-75 transition duration-200"></div>
+                <div className="relative bg-gradient-to-r from-blue-500 to-fuchsia-500 rounded-[2rem] p-[2px]">
+                   <div className="bg-white rounded-[1.9rem] py-5 flex items-center justify-center gap-3 transition-transform active:scale-95">
+                      <div className="bg-blue-100 p-2 rounded-full">
+                        <Droplets size={24} className="text-blue-500 fill-blue-500" />
+                      </div>
+                      <span className="text-2xl font-black text-slate-900 tracking-tight">Drink Water</span>
+                   </div>
+                </div>
+             </button>
+          </div>
+        </div>
+
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="animate-spin text-fuchsia-500" size={48} />
+    </div>
+  );
+};
+
+export default App;
