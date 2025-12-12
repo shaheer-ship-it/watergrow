@@ -3,11 +3,17 @@
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2023-10-16' as any,
-});
-
 export async function createCheckoutSession() {
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeKey) {
+    console.error("Missing STRIPE_SECRET_KEY");
+    throw new Error("Payment configuration missing. Please check server logs.");
+  }
+
+  const stripe = new Stripe(stripeKey, {
+    apiVersion: '2023-10-16' as any,
+  });
+
   const headersList = await headers();
   const origin = headersList.get('origin') || 'http://localhost:3000';
 
