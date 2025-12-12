@@ -1,10 +1,7 @@
-'use client';
-
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { PlantRecord, UserRole, AppView } from './types';
 import PlantStage from './components/PlantStage';
-import { createCheckoutSession } from './app/actions';
 import { Droplets, Heart, ArrowRight, Loader2, Bell, LogOut, CheckCircle2, Copy, CreditCard, X, Coffee, ShieldCheck } from 'lucide-react';
 
 // Stripe Configuration
@@ -139,16 +136,23 @@ const App: React.FC = () => {
       alert("Payment system not configured (Missing Publishable Key).");
       return;
     }
-    
+
     setPaymentLoading(true);
     try {
-      // Call the Server Action
-      const response = await createCheckoutSession();
-      
+      // Call the Vercel serverless API endpoint
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const response = await res.json();
+
       // Handle Server-Side Errors gracefully
-      if (response.error) {
-        console.error("Server Action Error:", response.error);
-        alert(response.error); // Display the ACTUAL error from the server
+      if (!res.ok || response.error) {
+        console.error("API Error:", response.error);
+        alert(response.error || "Failed to create checkout session");
         setPaymentLoading(false);
         return;
       }
@@ -164,7 +168,7 @@ const App: React.FC = () => {
       }
       const stripe = window.Stripe(STRIPE_PUBLISHABLE_KEY);
       const { error } = await stripe.redirectToCheckout({ sessionId: response.sessionId });
-      
+
       if (error) {
         console.error('Stripe Redirect Error:', error);
         alert(`Redirect failed: ${error.message}`);
