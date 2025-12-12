@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { PlantRecord, UserRole, AppView } from './types';
@@ -8,7 +10,13 @@ import { Droplets, Heart, ArrowRight, Loader2, Bell, LogOut, CheckCircle2, Copy,
 // Stripe Configuration
 // Using fallback to ensure it works immediately if env var isn't loaded
 const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_live_51SaQdmPgKI4BZbGFXMH7j95m73CU4FRDZgabXeS8qRQtjPF70losWvyQI5ekdc6tqo40MYO17zhZ3PlTGx3OP4Bn00u70dV1t7';
-declare const Stripe: any;
+
+// Ensure Stripe is available on window from the CDN script
+declare global {
+  interface Window {
+    Stripe?: any;
+  }
+}
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('ONBOARDING');
@@ -150,7 +158,11 @@ const App: React.FC = () => {
       }
 
       // Initialize Stripe Client
-      const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+      // We use window.Stripe because we loaded it via CDN in layout.tsx
+      if (!window.Stripe) {
+        throw new Error("Stripe.js failed to load.");
+      }
+      const stripe = window.Stripe(STRIPE_PUBLISHABLE_KEY);
       const { error } = await stripe.redirectToCheckout({ sessionId: response.sessionId });
       
       if (error) {
