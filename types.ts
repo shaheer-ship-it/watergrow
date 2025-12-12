@@ -6,4 +6,4 @@ export interface PlantRecord {
 
 export type UserRole = 'p1' | 'p2';
 
-export type AppView = 'JOIN' | 'ROLE' | 'GAME';
+export type AppView = 'ONBOARDING' | 'JOIN' | 'ROLE' | 'GAME';
