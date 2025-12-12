@@ -134,17 +134,34 @@ const App: React.FC = () => {
     
     setPaymentLoading(true);
     try {
-      const { sessionId } = await createCheckoutSession();
+      // Call the Server Action
+      const response = await createCheckoutSession();
+      
+      // Handle Server-Side Errors gracefully
+      if (response.error) {
+        console.error("Server Action Error:", response.error);
+        alert(response.error); // Display the ACTUAL error from the server
+        setPaymentLoading(false);
+        return;
+      }
+
+      if (!response.sessionId) {
+        throw new Error("No Session ID returned from server.");
+      }
+
+      // Initialize Stripe Client
       const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
-      const { error } = await stripe.redirectToCheckout({ sessionId });
+      const { error } = await stripe.redirectToCheckout({ sessionId: response.sessionId });
+      
       if (error) {
         console.error('Stripe Redirect Error:', error);
-        alert('Payment initialization failed.');
+        alert(`Redirect failed: ${error.message}`);
         setPaymentLoading(false);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Payment Error:", err);
-      alert("System error. Please try again.");
+      // Display specific error instead of generic "System Error"
+      alert(`Error: ${err.message || "Unknown system error"}`);
       setPaymentLoading(false);
     }
   };
