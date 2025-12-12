@@ -2,14 +2,18 @@ import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-// The webhook secret provided from your Stripe Dashboard
-const endpointSecret = 'whsec_VbeAPj3LuPGPS4JKm2Rt2Fc9QHQPPuHP';
-
 export async function POST(req: Request) {
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   if (!stripeKey) {
      console.error('STRIPE_SECRET_KEY is missing');
      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+  }
+
+  // Use the secret from environment variables
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!endpointSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is missing');
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
   }
 
   const stripe = new Stripe(stripeKey, {

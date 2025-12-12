@@ -6,7 +6,7 @@ import { createCheckoutSession } from './app/actions';
 import { Droplets, Heart, ArrowRight, Loader2, Bell, LogOut, CheckCircle2, Copy, CreditCard, X, Coffee, ShieldCheck } from 'lucide-react';
 
 // Stripe Configuration
-const STRIPE_PUBLISHABLE_KEY = 'pk_live_51SaQdmPgKI4BZbGFXMH7j95m73CU4FRDZgabXeS8qRQtjPF70losWvyQI5ekdc6tqo40MYO17zhZ3PlTGx3OP4Bn00u70dV1t7';
+const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 declare const Stripe: any;
 
 const App: React.FC = () => {
@@ -126,6 +126,11 @@ const App: React.FC = () => {
   }
 
   const handlePayment = async () => {
+    if (!STRIPE_PUBLISHABLE_KEY) {
+      alert("Payment system not configured (Missing Publishable Key).");
+      return;
+    }
+    
     setPaymentLoading(true);
     try {
       const { sessionId } = await createCheckoutSession();
