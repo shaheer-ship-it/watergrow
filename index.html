@@ -54,6 +54,28 @@
         animation: grow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
+      @keyframes sway {
+        0%, 100% { transform: rotate(-1deg); }
+        50% { transform: rotate(1deg); }
+      }
+      .animate-sway {
+        animation: sway 6s ease-in-out infinite;
+        transform-origin: bottom center;
+      }
+
+      @keyframes jelly {
+        0% { transform: scale(1, 1); }
+        30% { transform: scale(1.25, 0.75); }
+        40% { transform: scale(0.75, 1.25); }
+        50% { transform: scale(1.15, 0.85); }
+        65% { transform: scale(0.95, 1.05); }
+        75% { transform: scale(1.05, 0.95); }
+        100% { transform: scale(1, 1); }
+      }
+      .animate-jelly {
+        animation: jelly 0.6s both;
+      }
+
       /* Tech/Glass Panels */
       .tech-panel {
         background: rgba(255, 255, 255, 0.85);
