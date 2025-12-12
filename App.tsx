@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { PlantRecord, UserRole, AppView } from './types';
 import PlantStage from './components/PlantStage';
@@ -58,6 +58,13 @@ const App: React.FC = () => {
   const selectRole = (selectedRole: UserRole) => {
     setRole(selectedRole);
     setView('GAME');
+  };
+
+  const handleLeaveRoom = () => {
+    setRole(null);
+    setRoomId('');
+    setPlantData(null); // Clear data to prevent stale state on rejoin
+    setView('JOIN');
   };
 
   // Subscribe to real-time updates when in GAME view
@@ -232,11 +239,7 @@ const App: React.FC = () => {
               </div>
             </div>
             <button 
-              onClick={() => {
-                setRole(null);
-                setRoomId('');
-                setView('JOIN');
-              }}
+              onClick={handleLeaveRoom}
               className="text-xs font-semibold text-gray-500 hover:text-red-500 transition-colors"
             >
               Leave Room

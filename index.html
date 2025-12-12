@@ -21,19 +21,21 @@
         animation: pop 0.3s ease-in-out;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.87.1"
-  }
-}
-</script>
-</head>
+    <script type="importmap">
+    {
+      "imports": {
+        "react-dom/": "https://esm.sh/react-dom@^18.2.0/",
+        "lucide-react": "https://esm.sh/lucide-react@^0.344.0",
+        "react/": "https://esm.sh/react@^18.2.0/",
+        "react": "https://esm.sh/react@^18.2.0",
+        "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.39.0"
+      }
+    }
+    </script>
+  </head>
   <body>
     <div id="root"></div>
+    <!-- CRITICAL FIX: Entry point for Vite/Bundlers -->
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
