@@ -3,7 +3,7 @@ import { supabase } from './lib/supabaseClient';
 import { PlantRecord, UserRole, AppView } from './types';
 import PlantStage from './components/PlantStage';
 import { createCheckoutSession } from './app/actions';
-import { Droplets, Heart, Users, ArrowRight, Loader2, Bell, BellRing, LogOut, CheckCircle2, ChevronRight, Sparkles, ChevronLeft, Sprout, Zap, Smile, Copy, CreditCard, X, Coffee } from 'lucide-react';
+import { Droplets, Heart, ArrowRight, Loader2, Bell, LogOut, CheckCircle2, Copy, CreditCard, X, Coffee, ShieldCheck } from 'lucide-react';
 
 // Stripe Configuration
 const STRIPE_PUBLISHABLE_KEY = 'pk_live_51SaQdmPgKI4BZbGFXMH7j95m73CU4FRDZgabXeS8qRQtjPF70losWvyQI5ekdc6tqo40MYO17zhZ3PlTGx3OP4Bn00u70dV1t7';
@@ -84,7 +84,7 @@ const App: React.FC = () => {
       setView('ROLE');
     } catch (err: any) {
       console.error('Error joining room:', err);
-      setError('Check your connection bestie, something broke.');
+      setError('Connection failed. Please retry.');
     } finally {
       setLoading(false);
     }
@@ -113,8 +113,8 @@ const App: React.FC = () => {
     const permission = await Notification.requestPermission();
     setNotificationPermission(permission);
     if (permission === 'granted') {
-      new Notification("You're set! 💖", {
-        body: "We'll ping you when your bestie hydrates."
+      new Notification("Notifications Active", {
+        body: "You will be notified when your partner logs hydration."
       });
     }
   };
@@ -128,23 +128,17 @@ const App: React.FC = () => {
   const handlePayment = async () => {
     setPaymentLoading(true);
     try {
-      // 1. Call Server Action to create session securely
       const { sessionId } = await createCheckoutSession();
-      
-      // 2. Load Stripe Client
       const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
-      
-      // 3. Redirect
       const { error } = await stripe.redirectToCheckout({ sessionId });
-      
       if (error) {
         console.error('Stripe Redirect Error:', error);
-        alert('Could not redirect to checkout.');
+        alert('Payment initialization failed.');
         setPaymentLoading(false);
       }
     } catch (err) {
       console.error("Payment Error:", err);
-      alert("Something went wrong initializing the donation. (Ensure server-side keys are set)");
+      alert("System error. Please try again.");
       setPaymentLoading(false);
     }
   };
@@ -181,8 +175,8 @@ const App: React.FC = () => {
 
     if (prevPartnerWater.current !== null && partnerWater > prevPartnerWater.current) {
       if (notificationPermission === 'granted') {
-        new Notification("Hydration Check! 💧", {
-          body: "Your partner just took a sip. Keep it up!",
+        new Notification("Partner Activity", {
+          body: "Your partner just hydrated.",
           silent: false,
         });
       }
@@ -216,7 +210,7 @@ const App: React.FC = () => {
   if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin text-fuchsia-500" size={40} />
+        <Loader2 className="animate-spin text-slate-800" size={32} />
       </div>
     );
   }
@@ -225,89 +219,78 @@ const App: React.FC = () => {
   if (view === 'ONBOARDING') {
     const steps = [
       {
-        emoji: "👯‍♀️",
-        title: "Sync Up",
-        desc: "Create a room with your bestie or partner. It's a shared hydration station.",
-        buttonText: "How?"
+        title: "Synchronization",
+        desc: "Establish a real-time connection link with your partner.",
+        buttonText: "Initialize"
       },
       {
-        emoji: "🌱",
-        title: "Grow Together",
-        desc: "When YOU drink water, THEIR plant grows on their screen. It's giving ✨supportive✨.",
-        buttonText: "Wait, cool"
+        title: "Real-time Growth",
+        desc: "Hydration inputs on your device stimulate growth on the connected interface.",
+        buttonText: "Continue"
       },
       {
-        emoji: "🔔",
-        title: "Stay in the Loop",
-        desc: "Turn on notifs to get hyped every time they take a sip.",
+        title: "Active Alerts",
+        desc: "Enable system notifications to stay synchronized with partner activity.",
         action: true,
-        buttonText: "Let's Go"
+        buttonText: "Launch"
       }
     ];
 
     const currentStep = steps[onboardingStep];
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
-         {/* Blob Backgrounds */}
-         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob"></div>
-         <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-cyan-300 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-2000"></div>
-
-         <div className="glass-panel w-full max-w-md p-8 rounded-[3rem] shadow-2xl relative z-10 border border-white/60 bg-white/40 backdrop-blur-2xl">
+      <div className="min-h-screen flex items-center justify-center p-6">
+         <div className="tech-panel w-full max-w-md p-10 rounded-2xl relative z-10">
             
-            {/* Story Progress Bar */}
-            <div className="flex gap-2 mb-8">
+            {/* Progress Indicators */}
+            <div className="flex gap-2 mb-10">
                {steps.map((_, idx) => (
                  <div 
                    key={idx} 
-                   className={`h-1.5 rounded-full flex-1 transition-all duration-500 ${idx <= onboardingStep ? 'bg-slate-900' : 'bg-slate-900/10'}`}
+                   className={`h-1 rounded-full flex-1 transition-all duration-300 ${idx <= onboardingStep ? 'bg-slate-900' : 'bg-slate-200'}`}
                  />
                ))}
             </div>
 
-            <div className="flex flex-col items-center text-center">
-               <div className="text-8xl mb-6 animate-pop filter drop-shadow-lg">
-                 {currentStep.emoji}
-               </div>
-               
-               <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight leading-tight">
+            <div className="flex flex-col items-start text-left">
+               <h2 className="text-3xl font-bold text-slate-900 mb-4 tracking-tight">
                  {currentStep.title}
                </h2>
                
-               <p className="text-slate-600 text-lg font-medium leading-relaxed mb-8">
+               <p className="text-slate-500 text-base leading-relaxed mb-8 font-medium">
                  {currentStep.desc}
                </p>
 
                {currentStep.action && (
-                 <div className="w-full mb-6">
+                 <div className="w-full mb-8">
                     {notificationPermission === 'default' ? (
                       <button 
                         onClick={requestNotificationPermission}
-                        className="w-full bg-yellow-300 hover:bg-yellow-400 text-slate-900 font-bold py-4 px-6 rounded-2xl transition-all flex items-center justify-center gap-3 transform hover:-translate-y-1 shadow-[4px_4px_0px_rgba(0,0,0,0.1)]"
+                        className="w-full py-3 px-4 rounded-lg border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold transition-all flex items-center justify-center gap-2 hover:bg-slate-50"
                       >
-                        <Bell className="fill-slate-900" size={20} />
-                        Turn on Notifs
+                        <Bell size={16} />
+                        Enable Notifications
                       </button>
                     ) : (
-                      <div className="w-full bg-green-100 text-green-700 font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 border border-green-200">
-                        <CheckCircle2 size={20} />
-                        You're all set!
+                      <div className="w-full py-3 px-4 rounded-lg bg-emerald-50 text-emerald-700 font-medium flex items-center gap-2 border border-emerald-100 text-sm">
+                        <CheckCircle2 size={16} />
+                        Permissions granted
                       </div>
                     )}
                  </div>
                )}
             </div>
 
-            <div className="mt-4">
+            <div className="mt-2 flex justify-end">
                <button
                  onClick={() => {
                    if (onboardingStep < steps.length - 1) setOnboardingStep(prev => prev + 1);
                    else completeOnboarding();
                  }}
-                 className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xl font-bold py-5 rounded-3xl shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                 className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                >
                  {currentStep.buttonText}
-                 <ArrowRight size={24} />
+                 <ArrowRight size={16} />
                </button>
             </div>
          </div>
@@ -319,39 +302,34 @@ const App: React.FC = () => {
   if (view === 'JOIN') {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="w-full max-w-md relative">
+        <div className="w-full max-w-md">
           
           <div className="text-center mb-10">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-white/50 border border-white/60 text-sm font-bold text-slate-500 mb-4 backdrop-blur-md">
-              Current Vibe: Hydrated 💧
-            </span>
-            <h1 className="text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-2">
-              Water &<br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-fuchsia-600">Grow</span>
+            <h1 className="text-4xl font-bold text-slate-900 tracking-tight mb-2">
+              Water & Grow
             </h1>
+            <p className="text-slate-500 font-medium">Real-time Hydration Sync</p>
           </div>
 
-          <div className="glass-panel rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden">
-            {/* Decorative background blur */}
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-300 rounded-full blur-3xl opacity-50"></div>
-            
-            <div className="relative z-10 space-y-6">
+          <div className="tech-panel rounded-2xl p-8 relative">
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-extrabold text-slate-900 ml-1 mb-2 uppercase tracking-wide">
-                  Room Name
+                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
+                  Session ID
                 </label>
                 <input
                   type="text"
                   value={roomId}
                   onChange={(e) => setRoomId(e.target.value)}
-                  placeholder="e.g. tacos-tuesday"
-                  className="w-full px-6 py-5 bg-white/70 border-2 border-white/50 rounded-2xl focus:ring-4 focus:ring-fuchsia-200 focus:border-fuchsia-400 outline-none transition-all text-xl font-bold text-slate-900 placeholder-slate-400 shadow-inner"
+                  placeholder="enter-room-name"
+                  className="tech-input w-full pb-2 text-xl font-medium text-slate-900 placeholder-slate-300"
                   onKeyDown={(e) => e.key === 'Enter' && handleJoinRoom()}
                 />
               </div>
 
               {error && (
-                <div className="bg-red-50 text-red-500 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2">
-                   <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-2 border border-red-100">
+                   <ShieldCheck size={16} />
                    {error}
                 </div>
               )}
@@ -359,9 +337,9 @@ const App: React.FC = () => {
               <button
                 onClick={handleJoinRoom}
                 disabled={loading || !roomId.trim()}
-                className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-xl py-5 rounded-2xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2 mt-4"
               >
-                {loading ? <Loader2 className="animate-spin" /> : <>Start Session 🚀</>}
+                {loading ? <Loader2 className="animate-spin" size={20} /> : "Connect"}
               </button>
             </div>
           </div>
@@ -374,39 +352,34 @@ const App: React.FC = () => {
   if (view === 'ROLE') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-lg">
-          <h2 className="text-4xl font-extrabold text-slate-900 text-center mb-2">Pick Your Spot</h2>
-          <p className="text-slate-500 text-center mb-10 text-lg font-medium">Which plant are you watering?</p>
+        <div className="w-full max-w-md">
+          <h2 className="text-2xl font-bold text-slate-900 text-center mb-1">Select Interface</h2>
+          <p className="text-slate-500 text-center mb-8 text-sm">Choose your designated display side.</p>
           
-          <div className="grid gap-5">
+          <div className="grid gap-4">
             {[
-              { id: 'p1', label: 'Player One', color: 'bg-blue-100', icon: '🤠', border: 'hover:border-blue-400' },
-              { id: 'p2', label: 'Player Two', color: 'bg-fuchsia-100', icon: '👽', border: 'hover:border-fuchsia-400' }
+              { id: 'p1', label: 'Unit One', sub: 'Left Display' },
+              { id: 'p2', label: 'Unit Two', sub: 'Right Display' }
             ].map((opt) => (
               <button
                 key={opt.id}
                 onClick={() => selectRole(opt.id as UserRole)}
-                className={`group relative flex items-center p-6 bg-white/60 hover:bg-white/90 border-2 border-white ${opt.border} rounded-[2rem] shadow-sm hover:shadow-xl transition-all duration-300 text-left`}
+                className="group flex items-center justify-between p-6 bg-white border border-slate-200 hover:border-slate-400 rounded-xl transition-all duration-200"
               >
-                <div className={`w-16 h-16 ${opt.color} rounded-2xl flex items-center justify-center text-3xl mr-6 shadow-inner group-hover:scale-110 transition-transform`}>
-                  {opt.icon}
-                </div>
                 <div>
-                  <span className="block text-xl font-bold text-slate-900">{opt.label}</span>
-                  <span className="text-slate-500 font-medium text-sm">Tap to select</span>
+                  <span className="block text-lg font-bold text-slate-900">{opt.label}</span>
+                  <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">{opt.sub}</span>
                 </div>
-                <div className="absolute right-8 opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1">
-                  <ArrowRight className="text-slate-900" />
-                </div>
+                <ArrowRight className="text-slate-300 group-hover:text-slate-900 transition-colors" size={20} />
               </button>
             ))}
           </div>
           
           <button 
              onClick={() => setView('JOIN')}
-             className="w-full mt-8 text-slate-400 hover:text-slate-600 font-bold py-2 transition-colors uppercase tracking-widest text-xs"
+             className="w-full mt-8 text-slate-400 hover:text-slate-600 text-xs font-semibold uppercase tracking-widest transition-colors"
           >
-            Switch Room
+            Cancel Connection
           </button>
         </div>
       </div>
@@ -419,21 +392,20 @@ const App: React.FC = () => {
     const partnerCount = role === 'p1' ? plantData.p2_water : plantData.p1_water;
 
     return (
-      <div className="min-h-screen flex flex-col relative overflow-hidden">
+      <div className="min-h-screen flex flex-col relative">
         
         {/* Success Overlay */}
         {showSuccess && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-md animate-in fade-in">
-             <div className="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-sm mx-4 relative overflow-hidden">
-                <div className="absolute inset-0 bg-yellow-100/50 -z-10"></div>
-                <div className="text-6xl mb-4 animate-bounce">☕️</div>
-                <h3 className="text-2xl font-black text-slate-900 mb-2">Thanks Bestie!</h3>
-                <p className="text-slate-600 mb-6">Your donation keeps our plants watered and servers running.</p>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
+             <div className="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-4 border border-slate-100">
+                <div className="text-4xl mb-4">✨</div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Contribution Received</h3>
+                <p className="text-slate-500 mb-6 text-sm">Thank you for supporting the platform.</p>
                 <button 
                   onClick={() => setShowSuccess(false)}
-                  className="bg-slate-900 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:scale-105 transition-transform"
+                  className="w-full bg-slate-900 text-white font-semibold py-3 rounded-lg hover:bg-slate-800 transition-colors"
                 >
-                  You're Welcome
+                  Close
                 </button>
              </div>
           </div>
@@ -441,138 +413,113 @@ const App: React.FC = () => {
 
         {/* Payment Modal */}
         {showPayment && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="glass-panel w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl relative bg-white/80 border border-white">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/10 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative border border-slate-200">
               <button 
                 onClick={() => setShowPayment(false)}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
               
-              <div className="flex flex-col items-center text-center pt-4">
-                <div className="w-20 h-20 bg-gradient-to-tr from-yellow-300 to-amber-400 rounded-full flex items-center justify-center shadow-lg mb-6 animate-float">
-                  <Coffee size={36} className="text-white" />
+              <div className="flex flex-col items-center text-center pt-2">
+                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                  <Coffee size={20} className="text-slate-700" />
                 </div>
                 
-                <h3 className="text-2xl font-black text-slate-900 mb-2">Hydration Fund</h3>
-                <p className="text-slate-500 font-medium mb-8 leading-snug">
-                  Keep the servers watered and the plants growing! Your support helps us stay hydrated.
+                <h3 className="text-lg font-bold text-slate-900 mb-1">Platform Contribution</h3>
+                <p className="text-slate-500 text-sm mb-6 leading-relaxed px-4">
+                  Support ongoing development and server maintenance costs.
                 </p>
 
-                <div className="w-full bg-slate-50 rounded-2xl p-4 mb-6 border border-slate-100 flex items-center justify-between">
+                <div className="w-full bg-slate-50 rounded-xl p-4 mb-6 border border-slate-100 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="bg-white p-2 rounded-xl shadow-sm">
-                       <CreditCard size={20} className="text-slate-700" />
-                    </div>
-                    <div className="text-left">
-                       <div className="text-sm font-bold text-slate-800">Donation</div>
-                       <div className="text-xs text-slate-400 font-medium">One-time</div>
-                    </div>
+                    <CreditCard size={18} className="text-slate-400" />
+                    <span className="text-sm font-semibold text-slate-700">One-time</span>
                   </div>
-                  <div className="text-xl font-black text-slate-900">$5.00</div>
+                  <div className="text-lg font-bold text-slate-900">$5.00</div>
                 </div>
 
                 <button 
                   onClick={handlePayment}
                   disabled={paymentLoading}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2"
                 >
                   {paymentLoading ? (
-                    <Loader2 className="animate-spin" />
+                    <Loader2 className="animate-spin" size={18} />
                   ) : (
-                    <>
-                      <span>Donate with Card</span>
-                      <ArrowRight size={20} />
-                    </>
+                    "Process Donation"
                   )}
                 </button>
-                <p className="mt-4 text-[10px] text-slate-400 uppercase tracking-widest font-bold">Secured by Stripe</p>
+                <div className="flex items-center justify-center gap-1.5 mt-4 text-[10px] text-slate-400 font-medium uppercase tracking-widest">
+                  <ShieldCheck size={12} />
+                  Secure Transaction
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Top Floating Bar */}
-        <div className="relative z-20 px-4 py-4">
-          <div className="glass-panel rounded-full p-2 flex justify-between items-center max-w-lg mx-auto shadow-lg">
-            
+        {/* Header Bar */}
+        <div className="w-full px-6 py-6 flex justify-between items-center z-20">
+            {/* Room Info */}
             <div 
               onClick={copyRoomCode}
-              className="flex items-center gap-3 px-2 cursor-pointer hover:bg-white/40 rounded-full py-1 transition-colors group"
+              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full cursor-pointer hover:border-slate-300 transition-colors group shadow-sm"
             >
-               <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-md">
-                 <Sparkles size={18} className="fill-yellow-400 text-yellow-400" />
+               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+               <div className="text-xs font-mono font-semibold text-slate-600 group-hover:text-slate-900">
+                 {roomId}
                </div>
-               <div className="leading-tight">
-                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Room</div>
-                 <div className="font-bold text-slate-900 flex items-center gap-1">
-                   {roomId}
-                   {copied ? <CheckCircle2 size={12} className="text-green-500"/> : <Copy size={12} className="text-slate-300 group-hover:text-slate-500"/>}
-                 </div>
-               </div>
+               {copied ? <CheckCircle2 size={12} className="text-emerald-500"/> : <Copy size={12} className="text-slate-300"/>}
             </div>
 
-            <div className="flex items-center gap-2 pr-1">
+            {/* Controls */}
+            <div className="flex items-center gap-3">
                <button 
                 onClick={() => setShowPayment(true)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-500 hover:bg-indigo-200 transition-colors"
-                title="Support"
+                className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold py-2 px-4 rounded-full shadow-sm transition-all flex items-center gap-2"
               >
-                <Heart size={18} className="fill-current" />
+                Donate
+                <Heart size={12} className="text-rose-500 fill-rose-500" />
               </button>
+
                <button 
                 onClick={handleLeaveRoom}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
               >
-                <LogOut size={18} />
+                <LogOut size={16} />
               </button>
             </div>
-          </div>
         </div>
 
         {/* Garden Area */}
-        <div className="flex-1 flex flex-col justify-center items-center relative pb-32">
-           {/* Decorative Elements */}
-           <div className="absolute top-1/4 left-10 text-6xl opacity-10 rotate-12 pointer-events-none">☁️</div>
-           <div className="absolute top-1/3 right-10 text-6xl opacity-10 -rotate-12 pointer-events-none">✨</div>
-
-           <div className="grid grid-cols-2 gap-4 w-full max-w-4xl px-2 md:px-12 items-end">
-            <div className="order-1 flex justify-center transform scale-95 md:scale-100">
-              <PlantStage 
+        <div className="flex-1 flex flex-col justify-center items-center pb-24">
+           <div className="flex flex-col md:flex-row gap-12 items-center justify-center w-full max-w-4xl px-8">
+            <PlantStage 
                 waterCount={myCount} 
-                label="You" 
+                label="Unit 1 (You)" 
                 isOwner={true} 
-              />
-            </div>
-            <div className="order-2 flex justify-center transform scale-95 md:scale-100">
-              <PlantStage 
+            />
+            <PlantStage 
                 waterCount={partnerCount} 
-                label="Bestie" 
+                label="Unit 2 (Partner)" 
                 isOwner={false} 
-              />
-            </div>
+            />
            </div>
         </div>
 
-        {/* Bottom Button Area */}
-        <div className="fixed bottom-8 left-0 right-0 z-30 px-6 pointer-events-none">
-          <div className="max-w-xs mx-auto pointer-events-auto">
+        {/* Bottom Floating Action Button */}
+        <div className="fixed bottom-10 left-0 right-0 z-30 flex justify-center pointer-events-none">
              <button
                 onClick={handleDrink}
-                className="group relative w-full touch-manipulation"
+                className="pointer-events-auto bg-slate-900 hover:bg-slate-800 text-white pl-6 pr-8 py-4 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center gap-4"
               >
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-fuchsia-500 rounded-[2rem] blur opacity-40 group-hover:opacity-75 transition duration-200"></div>
-                <div className="relative bg-gradient-to-r from-blue-500 to-fuchsia-500 rounded-[2rem] p-[2px]">
-                   <div className="bg-white rounded-[1.9rem] py-5 flex items-center justify-center gap-3 transition-transform active:scale-95">
-                      <div className="bg-blue-100 p-2 rounded-full">
-                        <Droplets size={24} className="text-blue-500 fill-blue-500" />
-                      </div>
-                      <span className="text-2xl font-black text-slate-900 tracking-tight">Drink Water</span>
-                   </div>
+                <div className="bg-white/10 p-2 rounded-full">
+                  <Droplets size={20} className="text-emerald-400 fill-emerald-400" />
                 </div>
+                <span className="text-lg font-bold tracking-tight">Log Hydration</span>
              </button>
-          </div>
         </div>
 
       </div>
@@ -581,7 +528,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="animate-spin text-fuchsia-500" size={48} />
+      <Loader2 className="animate-spin text-slate-300" size={32} />
     </div>
   );
 };
