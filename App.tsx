@@ -4,11 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { PlantRecord, UserRole, AppView } from './types';
 import PlantStage from './components/PlantStage';
-import { createCheckoutSession } from './app/actions';
 import { Droplets, Heart, ArrowRight, Loader2, Bell, LogOut, CheckCircle2, Copy, CreditCard, X, Coffee, ShieldCheck } from 'lucide-react';
 
 // Stripe Configuration
-// Using fallback to ensure it works immediately if env var isn't loaded
 const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_live_51SaQdmPgKI4BZbGFXMH7j95m73CU4FRDZgabXeS8qRQtjPF70losWvyQI5ekdc6tqo40MYO17zhZ3PlTGx3OP4Bn00u70dV1t7';
 
 // Ensure Stripe is available on window from the CDN script
@@ -142,28 +140,31 @@ const App: React.FC = () => {
     
     setPaymentLoading(true);
     try {
-      // Call the Server Action
-      const response = await createCheckoutSession();
+      // Fetch session from API
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
-      // Handle Server-Side Errors gracefully
-      if (response.error) {
-        console.error("Server Action Error:", response.error);
-        alert(response.error); // Display the ACTUAL error from the server
-        setPaymentLoading(false);
-        return;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Network response was not ok');
       }
 
-      if (!response.sessionId) {
+      if (!data.sessionId) {
         throw new Error("No Session ID returned from server.");
       }
 
       // Initialize Stripe Client
-      // We use window.Stripe because we loaded it via CDN in layout.tsx
+      // We use window.Stripe because we loaded it via CDN in layout.tsx/index.html
       if (!window.Stripe) {
         throw new Error("Stripe.js failed to load.");
       }
       const stripe = window.Stripe(STRIPE_PUBLISHABLE_KEY);
-      const { error } = await stripe.redirectToCheckout({ sessionId: response.sessionId });
+      const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
       
       if (error) {
         console.error('Stripe Redirect Error:', error);
@@ -172,7 +173,6 @@ const App: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Payment Error:", err);
-      // Display specific error instead of generic "System Error"
       alert(`Error: ${err.message || "Unknown system error"}`);
       setPaymentLoading(false);
     }

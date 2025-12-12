@@ -1,5 +1,1 @@
-import App from '../App';
-
-export default function Page() {
-  return <App />;
-}
+// This file is deprecated and can be deleted. Logic is in App.tsx
